@@ -20,7 +20,7 @@ def parse_TIL_data(data):
       
     for post in data['data']['children']:
         if post['data']['author'] != 'TILMods':
-            parsed_data['data'].append({'score':post['data']['score'],  'title':post['data']['title'],  'id':post['data']['id']})
+            parsed_data['data'].append({'score':post['data']['score'],  'title':post['data']['title'],  'id':post['data']['id'], 'url':post['data']['url']})
           
     return parsed_data
 
@@ -36,6 +36,25 @@ def _twit_auth():
     api = tweepy.API(auth)
     
     return api
+
+#  Formats the title for readibility
+def _format_title(msg):
+    TIL = msg['title'].replace('TIL ', '').replace('TIL: ', '')
+
+    if TIL[-1] != '.' and TIL[-2:] != '."':
+        TIL = TIL + '.'
+
+    if TIL[0] == '"':
+        TIL = TIL[0] + TIL[1].capitalize() + TIL[2:]
+    else:
+        TIL = TIL[0].capitalize() + TIL[1:]
+
+    if TIL[0:2] == 'Of':
+        TIL = TIL[3].capitalize() + TIL[4:]
+    elif TIL[0:4] == 'That':
+        TIL = TIL[5].capitalize() + TIL[6:]
+
+    return TIL
 
 #  Post a message to Twitter    
 def post_to_twitter(content):
@@ -56,43 +75,34 @@ def post_to_twitter(content):
     
 def main():
  
-    x = get_hot_TIL()
-    y = parse_TIL_data(x)
-    
-    #  This opens the log of previous post ID's and creates a list of them to check against the new data pulled.  If the log does not exist the list is set to be emply
-    try:
-        open_id_archive = open('ID.log',  'rU')
-        id_list = [id.strip('\n') for id in open_id_archive]
-        open_id_archive.close()
-    except FileNotFoundError:
-        id_list = []
-              
-    log = open('TIL.log',  'a')
-    id_log = open('ID.log',  'a')
-     
-    for post in y['data']:
-        if post['score'] > 1000 and post['id'] not in id_list:
-            TIL = post['title'].replace('TIL ',  '').replace('TIL: ',  '').replace('that ',  '',  1)
-            if TIL[-1] != '.':
-                TIL = TIL + '.'
-            if TIL[0] == '"':
-                msg = TIL[0] + TIL[1].capitalize() + TIL[2:]
-                log.write(msg + '\n')
-                post_to_twitter(msg)
+    _get_reddit_data = get_hot_TIL()
+    _parse_reddit_data = parse_TIL_data(_get_reddit_data)
 
-            else:
-                msg = TIL[0].capitalize() + TIL[1:]
-                log.write(msg + '\n')
-                post_to_twitter(msg)
-              
-            id_log.write(str(post['id']) + '\n')
-                  
-    log.write(str(datetime.datetime.now()) + '\n' + '\n')
-    id_log.write(str(datetime.datetime.now()) + '\n' + '\n')
-          
-    log.close()
-    id_log.close()
-  
+    
+# This opens the log of previous post ID's and creates a list of them to check against the new data pulled.  If the log does not exist the list is set to be emply
+
+    log_dict = {'data': []}
+
+    try:
+        readlog = open('TIL.log',  'rU')
+        for line in readlog:
+            if line[0] == '{':
+                log_dict['data'].append(json.loads(line))
+        readlog.close()
+    except FileNotFoundError:
+        pass
+
+
+    log = open('TIL.log', 'a')
+
+    log.write('\n' + str(datetime.datetime.now()) + '\n\n')
+
+    for post in _parse_reddit_data['data']:
+        if post['score'] > 1000 and any(d['id'] == post['id'] for d in log_dict['data']) == False:
+            TILPost = _format_title(post)
+            log_data = {'id': post['id'], 'post':TILPost, 'url':post['url']}
+            log.write(json.dumps(log_data) + '\n')
+            # post_to_twitter(TILPost)
           
 if __name__ == '__main__':
     main()
