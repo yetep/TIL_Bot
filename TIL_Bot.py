@@ -62,17 +62,24 @@ def post_to_twitter(content):
         _twit_auth().update_status(content) 
         time.sleep(5)
     if len(content) > 140 and len(content) < 260:
-        lfs = 120                  
+        lfs = 120
         while True:
             if content[lfs] == ' ':
                 break
             else:
                 lfs = lfs + 1
-        msg_list = [content[0:lfs] + ' (1/2)', content[(lfs + 1):] + ' (2/2)']
-        for item in msg_list:
-            _twit_auth().update_status(item)
-            time.sleep(5)
-    
+        msg_list = [content[0:lfs], content[(lfs + 1):]]
+        _twit_auth().update_status(msg_list[0])
+        time.sleep(5)
+        reply_to = _get_latest_tweet()
+        _twit_auth().update_status(msg_list[1], reply_to)
+        time.sleep(5)
+
+def _get_latest_tweet():
+    auth = _twit_auth()
+    tweet = auth.user_timeline(id = auth.me(), count = 1)[0]['id']
+    return tweet
+
 def main():
  
     _get_reddit_data = get_hot_TIL()
