@@ -48,10 +48,9 @@ def main():
     twt = auth.search('to:TIL_Bot_')
 
     reply_log = open('reply.log', 'a')
-    reply_log.write('\n' + str(datetime.datetime.now()) + '\n\n')
 
     for tweet in twt['statuses']:
-        if any(d['id'] == tweet['in_reply_to_status_id'] for d in reply_dict['data']) == False:
+        if any(d['id'] == tweet['in_reply_to_status_id'] for d in reply_dict['data']) == False and tweet['user']['screen_name'] != 'TIL_Bot_':
             _send_url(tweet['in_reply_to_status_id'], tweet['user']['screen_name'])
             tweet_data = {'id':tweet['in_reply_to_status_id'], 'user':tweet['user']['screen_name'], 'text':tweet['text']}
             reply_log.write(json.dumps(tweet_data) + '\n')
@@ -59,4 +58,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
