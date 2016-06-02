@@ -4,6 +4,8 @@ from urllib.request import urlopen,  Request
 import datetime
 import tweepy
 import time
+from tweepy.parsers import JSONParser
+
 
 #  Pulls JSON data for the front page of TIL
 def get_hot_TIL():
@@ -33,7 +35,7 @@ def _twit_auth():
     access_secret = 'your access secret'
     auth = tweepy.OAuthHandler(consumer_key,  consumer_secret)
     auth.set_access_token(access_key,  access_secret)
-    api = tweepy.API(auth)
+    api = tweepy.API(auth, parser=JSONParser())
     
     return api
 
@@ -59,7 +61,7 @@ def _format_title(msg):
 #  Post a message to Twitter    
 def post_to_twitter(content):
     if len(content) < 141:
-        _twit_auth().update_status(content) 
+        # _twit_auth().update_status(content)
         time.sleep(5)
     if len(content) > 140 and len(content) < 260:
         lfs = 120
@@ -71,14 +73,10 @@ def post_to_twitter(content):
         msg_list = [content[0:lfs], content[(lfs + 1):]]
         _twit_auth().update_status(msg_list[0])
         time.sleep(5)
-        reply_to = _get_latest_tweet()
-        _twit_auth().update_status(msg_list[1], reply_to)
+        auth = _twit_auth()
+        tweet = auth.user_timeline(id=auth.me(), count=1)[0]['id']
+        _twit_auth().update_status(msg_list[1], tweet)
         time.sleep(5)
-
-def _get_latest_tweet():
-    auth = _twit_auth()
-    tweet = auth.user_timeline(id = auth.me(), count = 1)[0]['id']
-    return tweet
 
 def main():
  
@@ -109,7 +107,7 @@ def main():
             TILPost = _format_title(post)
             log_data = {'id': post['id'], 'post':TILPost, 'url':post['url']}
             log.write(json.dumps(log_data) + '\n')
-            # post_to_twitter(TILPost)
+            post_to_twitter(TILPost)
           
 if __name__ == '__main__':
     main()
