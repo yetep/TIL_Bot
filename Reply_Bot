@@ -2,13 +2,13 @@
 import json
 import tweepy
 from tweepy.parsers import JSONParser
-import datetime
+import Keys
 
 def _twit_auth():
-    consumer_key = 'Your consumer key'
-    consumer_secret = 'Your consumer secret'
-    access_key = 'Your access key'
-    access_secret = 'your access secret'
+    consumer_key = Keys.consumer_key
+    consumer_secret = Keys.consumer_secret
+    access_key = Keys.access_key
+    access_secret = Keys.access_secret
     auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
     auth.set_access_token(access_key, access_secret)
     api = tweepy.API(auth, parser=JSONParser())
@@ -32,13 +32,13 @@ def _send_url(status_id, user):
 
 def main():
 
-    reply_dict = {'data':[]}
+    reply_dict = []
 
     try:
         log_check = open('reply.log', 'rU')
         for line in log_check:
             if line[0] == '{':
-                reply_dict['data'].append(json.loads(line))
+                reply_dict.append(json.loads(line))
         log_check.close()
     except FileNotFoundError:
         pass
@@ -50,7 +50,7 @@ def main():
     reply_log = open('reply.log', 'a')
 
     for tweet in twt['statuses']:
-        if any(d['id'] == tweet['in_reply_to_status_id'] for d in reply_dict['data']) == False and tweet['user']['screen_name'] != 'TIL_Bot_':
+        if any(d['id'] == tweet['in_reply_to_status_id'] for d in reply_dict) == False and tweet['user']['screen_name'] != 'TIL_Bot_':
             _send_url(tweet['in_reply_to_status_id'], tweet['user']['screen_name'])
             tweet_data = {'id':tweet['in_reply_to_status_id'], 'user':tweet['user']['screen_name'], 'text':tweet['text']}
             reply_log.write(json.dumps(tweet_data) + '\n')
@@ -58,3 +58,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
