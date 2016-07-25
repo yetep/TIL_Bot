@@ -6,7 +6,7 @@ import time
 from tweepy.parsers import JSONParser
 import re
 import Keys
-
+import html
 
 #  Authenticate twitter account
 def _twit_auth():
@@ -37,14 +37,14 @@ def parse_TIL_data(data):
       
     for post in data['data']['children']:
         if post['data']['author'] != 'TILMods':
-            parsed_data.append({'score':post['data']['score'],  'title':post['data']['title'],  'id':post['data']['id'], 'url':post['data']['url']})
+            parsed_data.append({'score':post['data']['score'],  'title':html.unescape(post['data']['title']),  'id':post['data']['id'], 'url':post['data']['url']})
           
     return parsed_data
 
 #  Formats the title for readibility
 def _format_title(msg):
 
-    _strip = re.compile(r'TIL(:)? (of|that|-)?( )?')
+    _strip = re.compile(r'TIL( )?(:|,)? (of|that|That|Of|-)?( )?')
     _tostrip = _strip.search(msg['title'])
 
     try:
@@ -52,7 +52,7 @@ def _format_title(msg):
     except AttributeError:
         TIL = msg['title']
 
-    if TIL[-1] != '.' and TIL[-2:] != '."':
+    if TIL[-1] != '.' and TIL[-2:] != '."' and TIL[-1] != '!' and TIL[-2:] != '!"':
         TIL = TIL + '.'
 
     if TIL[0] == '"':
@@ -65,7 +65,7 @@ def _format_title(msg):
 #  Post a message to Twitter    
 def post_to_twitter(content):
     if len(content) < 141:
-        # _twit_auth().update_status(content)
+        _twit_auth().update_status(content)
         time.sleep(5)
     if len(content) > 140 and len(content) < 260:
         lfs = 120
