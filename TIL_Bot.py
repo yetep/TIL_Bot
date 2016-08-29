@@ -44,7 +44,7 @@ def parse_TIL_data(data):
 #  Formats the title for readibility
 def _format_title(msg):
 
-    _strip = re.compile(r'TIL( )?(:|,|/.|/...)? (of|that|That|Of|-)?(,)?( )?')
+    _strip = re.compile(r'(T|t)(I|i)(L|l)( )?(:|,|/.|/...)? (of|that|That|Of|-)?(,)?( )?')
     _tostrip = _strip.search(msg['title'])
 
     try:
