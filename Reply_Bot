@@ -3,6 +3,7 @@ import json
 import tweepy
 from tweepy.parsers import JSONParser
 import Keys
+from pymongo import MongoClient
 
 def _twit_auth():
     consumer_key = Keys.consumer_key
@@ -17,46 +18,34 @@ def _twit_auth():
 
 def _send_url(status_id, user):
     auth = _twit_auth()
-    post = auth.get_status(status_id)['text'].replace(' (1/2)', '').replace(' (2/2)', '')
-    post_log = open('TIL.log', 'rU')
-    post_log_list = []
+    post = auth.get_status(status_id)['text']
 
-    for line in post_log:
-        if line[0] == '{':
-            post_log_list.append(json.loads(line))
+    dbclient = MongoClient('localhost', 27017)
+    db = dbclient.TIL_Posts
 
-    for data in post_log_list:
-        if post in data['post']:
-            text = '@%s %s' % (user, data['url'])
+    all_posts = db.posts.distinct("post")
+
+    for cnt in all_posts:
+        if post in cnt:
+            _doc = db.posts.find_one({"post": cnt})
+            text = '@%s %s' % (user, _doc["url"])
             _twit_auth().update_status(text, status_id)
 
 def main():
-
-    reply_dict = []
-
-    try:
-        log_check = open('reply.log', 'rU')
-        for line in log_check:
-            if line[0] == '{':
-                reply_dict.append(json.loads(line))
-        log_check.close()
-    except FileNotFoundError:
-        pass
 
     auth = _twit_auth()
 
     twt = auth.search('to:TIL_Bot_')
 
-    reply_log = open('reply.log', 'a')
+    dbclient = MongoClient('localhost', 27017)
+    db = dbclient.TIL_Posts
 
     for tweet in twt['statuses']:
-        if any(d['id'] == tweet['in_reply_to_status_id'] for d in reply_dict) == False and tweet['user']['screen_name'] != 'TIL_Bot_':
+        if db.reply.find({"id": tweet['in_reply_to_status_id']}).count() == 0 and tweet['user']['screen_name'] != 'TIL_Bot_':
             _send_url(tweet['in_reply_to_status_id'], tweet['user']['screen_name'])
             tweet_data = {'id':tweet['in_reply_to_status_id'], 'user':tweet['user']['screen_name'], 'text':tweet['text']}
-            reply_log.write(json.dumps(tweet_data) + '\n')
-
+            db.reply.insert_one(tweet_data).inserted_id
 
 if __name__ == '__main__':
     main()
-
 
