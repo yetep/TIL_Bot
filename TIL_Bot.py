@@ -7,6 +7,7 @@ from tweepy.parsers import JSONParser
 import re
 import Keys
 import html
+from pymongo import MongoClient
 
 #  Authenticate twitter account
 def _twit_auth():
@@ -26,7 +27,7 @@ def get_hot_TIL():
     url = 'https://www.reddit.com/r/todayilearned/hot/.json'
     hed = { 'User-Agent' : 'a bot to pull hot TIL facts by /u/yetep'}
     req = Request(url,  headers=hed)
-    dict = json.loads(urlopen(req).readall().decode('utf-8'))
+    dict = json.loads(urlopen(req).read().decode('utf-8'))
 
     return dict
 
@@ -44,7 +45,7 @@ def parse_TIL_data(data):
 #  Formats the title for readibility
 def _format_title(msg):
 
-    _strip = re.compile(r'(T|t)(I|i)(L|l)( )?(:|,|/.|/...)? (of|that|That|Of|-)?(,)?( )?')
+    _strip = re.compile(r'TIL( )?(:|,|.|...)? (of|that|That|Of|-)?(,)?( )?')
     _tostrip = _strip.search(msg['title'])
 
     try:
@@ -87,28 +88,14 @@ def main():
     _get_reddit_data = get_hot_TIL()
     _parse_reddit_data = parse_TIL_data(_get_reddit_data)
 
-    
-# This opens the log of previous post ID's and creates a list of them to check against the new data pulled.  If the log does not exist the list is set to be emply
-
-    log_dict = []
-
-    try:
-        readlog = open('TIL.log',  'rU')
-        for line in readlog:
-            if line[0] == '{':
-                log_dict.append(json.loads(line))
-        readlog.close()
-    except FileNotFoundError:
-        pass
-
-
-    log = open('TIL.log', 'a')
+    dbclient = MongoClient('localhost', 27017)
+    db = dbclient.TIL_Posts
 
     for post in _parse_reddit_data:
-        if post['score'] > 1000 and any(d['id'] == post['id'] for d in log_dict) == False:
+        if post['score'] > 1000 and db.posts.find({"id": post['id']}).count() == 0:
             TILPost = _format_title(post)
-            log_data = {'id': post['id'], 'post':TILPost, 'url':post['url']}
-            log.write(json.dumps(log_data) + '\n')
+            db_data = {'id': post['id'], 'post':TILPost, 'url':post['url']}
+            db.posts.insert_one(db_data).inserted_id
             post_to_twitter(TILPost)
           
 if __name__ == '__main__':
